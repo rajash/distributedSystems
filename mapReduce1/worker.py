@@ -17,7 +17,7 @@ def on_request(ch, method, props, body):
     
     from mapper import map 
     
-    files = ['data1/' + file for file in os.listdir('data1')]
+    files = ['data/' + file for file in os.listdir('data')]
     
     response = {}
     for file in files:
