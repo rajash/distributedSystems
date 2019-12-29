@@ -25,6 +25,7 @@ class MapRpcClient(object):
     def call(self, func):
         self.response = None
         self.corr_id = str(uuid.uuid4())
+        self.channel.queue_declare(queue='rpc_queue')
         self.channel.basic_publish(
                                     exchange='',
                                     routing_key='rpc_queue',

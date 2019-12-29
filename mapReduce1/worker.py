@@ -17,11 +17,11 @@ def on_request(ch, method, props, body):
     
     from mapper import map 
     
-    files = ['data/' + file for file in os.listdir('data')]
+    files = ['data1/' + file for file in os.listdir('data1')]
     
     response = {}
     for file in files:
-        f = open(file, 'r',encoding='utf-8')
+        f = open(file, 'r',encoding='ISO-8859-1')
         text = ''.join(f.readlines())
         response = Counter(response) + Counter(map(text)) 
     
