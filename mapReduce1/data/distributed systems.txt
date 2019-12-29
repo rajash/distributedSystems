@@ -1,0 +1,161 @@
+﻿What is a Distributed System and why is it so complicated?
+Introduction
+With the ever-growing technological expansion of the world, distributed systems are becoming more and more widespread. They are a vast and complex field of study in computer science.
+
+This article aims to introduce you to distributed systems in a basic manner, showing you a glimpse of the different categories of such systems while not diving deep into the details.
+
+What is a distributed system?
+A distributed system in its most simplest definition is a group of computers working together as to appear as a single computer to the end-user.
+
+These machines have a shared state, operate concurrently and can fail independently without affecting the whole system’s uptime.
+
+I propose we incrementally work through an example of distributing a system so that you can get a better sense of it all:
+Let’s go with a database! Traditional databases are stored on the filesystem of one single machine, whenever you want to fetch/insert information in it — you talk to that machine directly.
+
+For us to distribute this database system, we’d need to have this database run on multiple machines at the same time. The user must be able to talk to whichever machine he chooses and should not be able to tell that he is not talking to a single machine — if he inserts a record into node#1, node #3 must be able to return that record.
+Why distribute a system?
+Systems are always distributed by necessity. The truth of the matter is — managing distributed systems is a complex topic chock-full of pitfalls and landmines. It is a headache to deploy, maintain and debug distributed systems, so why go there at all?
+
+What a distributed system enables you to do is scale horizontally. Going back to our previous example of the single database server, the only way to handle more traffic would be to upgrade the hardware the database is running on. This is called scaling vertically.
+
+Scaling vertically is all well and good while you can, but after a certain point you will see that even the best hardware is not sufficient for enough traffic, not to mention impractical to host.
+
+Scaling horizontally simply means adding more computers rather than upgrading the hardware of a single one.
+
+It is significantly cheaper than vertical scaling after a certain threshold but that is not its main case for preference.
+
+Vertical scaling can only bump your performance up to the latest hardware’s capabilities. These capabilities prove to be insufficient for technological companies with moderate to big workloads.
+
+The best thing about horizontal scaling is that you have no cap on how much you can scale — whenever performance degrades you simply add another machine, up to infinity potentially.
+
+Easy scaling is not the only benefit you get from distributed systems. Fault tolerance and low latency are also equally as important.
+
+Fault Tolerance — a cluster of ten machines across two data centers is inherently more fault-tolerant than a single machine. Even if one data center catches on fire, your application would still work.
+
+Low Latency — The time for a network packet to travel the world is physically bounded by the speed of light. For example, the shortest possible time for a request‘s round-trip time (that is, go back and forth) in a fiber-optic cable between New York to Sydney is 160ms. Distributed systems allow you to have a node in both cities, allowing traffic to hit the node that is closest to it.
+
+For a distributed system to work, though, you need the software running on those machines to be specifically designed for running on multiple computers at the same time and handling the problems that come along with it. This turns out to be no easy feat.
+
+Scaling our database
+Imagine that our web application got insanely popular. Imagine also that our database started getting twice as much queries per second as it can handle. Your application would immediately start to decline in performance and this would get noticed by your users.
+
+Let’s work together and make our database scale to meet our high demands.
+
+In a typical web application you normally read information much more frequently than you insert new information or modify old one.
+
+There is a way to increase read performance and that is by the so-called Master-Slave Replication strategy. Here, you create two new database servers which sync up with the main one. The catch is that you can only read from these new instances.
+
+Whenever you insert or modify information — you talk to the master database. It, in turn, asynchronously informs the slaves of the change and they save it as well.
+
+Congratulations, you can now execute 3x as much read queries! Isn’t this great?
+
+Pitfall
+Gotcha! We immediately lost the C in our relational database’s ACID guarantees, which stands for Consistency.
+
+You see, there now exists a possibility in which we insert a new record into the database, immediately afterwards issue a read query for it and get nothing back, as if it didn’t exist!
+
+Propagating the new information from the master to the slave does not happen instantaneously. There actually exists a time window in which you can fetch stale information. If this were not the case, your write performance would suffer, as it would have to synchronously wait for the data to be propagated.
+
+Distributed systems come with a handful of trade-offs. This particular issue is one you will have to live with if you want to adequately scale.
+
+Continuing to Scale
+
+Using the slave database approach, we can horizontally scale our read traffic up to some extent. That’s great but we’ve hit a wall in regards to our write traffic — it’s still all in one server!
+
+We’re not left with much options here. We simply need to split our write traffic into multiple servers as one is not able to handle it.
+
+One way is to go with a multi-master replication strategy. There, instead of slaves that you can only read from, you have multiple master nodes which support reads and writes. Unfortunately, this gets complicated real quick as you now have the ability to create conflicts (e.g insert two records with same ID).
+
+Let’s go with another technique called sharding (also called partitioning).
+
+With sharding you split your server into multiple smaller servers, called shards. These shards all hold different records — you create a rule as to what kind of records go into which shard. It is very important to create the rule such that the data gets spread in an uniform way.
+
+A possible approach to this is to define ranges according to some information about a record (e.g users with name A-D).
+
+This sharding key should be chosen very carefully, as the load is not always equal based on arbitrary columns. (e.g more people have a name starting with C rather than Z). A single shard that receives more requests than others is called a hot spot and must be avoided. Once split up, re-sharding data becomes incredibly expensive and can cause significant downtime, as was the case with FourSquare’s infamous 11 hour outage.
+
+To keep our example simple, assume our client (the Rails app) knows which database to use for each record. It is also worth noting that there are many strategies for sharding and this is a simple example to illustrate the concept.
+
+We have won quite a lot right now — we can increase our write traffic N times where N is the number of shards. This practically gives us almost no limit — imagine how finely-grained we can get with this partitioning.
+
+Pitfall
+Everything in Software Engineering is more or less a trade-off and this is no exception. Sharding is no simple feat and is best avoided until really needed.
+
+We have now made queries by keys other than the partitioned key incredibly inefficient (they need to go through all of the shards). SQL JOIN queries are even worse and complex ones become practically unusable.
+
+Decentralized vs Distributed
+Before we go any further I’d like to make a distinction between the two terms.
+
+Even though the words sound similar and can be concluded to mean the same logically, their difference makes a significant technological and political impact.
+
+Decentralized is still distributed in the technical sense, but the whole decentralized systems is not owned by one actor. No one company can own a decentralized system, otherwise it wouldn’t be decentralized anymore.
+
+This means that most systems we will go over today can be thought of as distributed centralized systems — and that is what they’re made to be.
+
+If you think about it — it is harder to create a decentralized system because then you need to handle the case where some of the participants are malicious. This is not the case with normal distributed systems, as you know you own all the nodes.
+
+Note: This definition has been debated a lot and can be confused with others (peer-to-peer, federated). In early literature, it’s been defined differently as well. Regardless, what I gave you as a definition is what I feel is the most widely used now that blockchain and cryptocurrencies popularized the term.
+
+Distributed System Categories
+We are now going to go through a couple of distributed system categories and list their largest publicly-known production usage. Bear in mind that most such numbers shown are outdated and are most probably significantly bigger as of the time you are reading this.
+
+Distributed Data Stores
+Distributed Data Stores are most widely used and recognized as Distributed Databases. Most distributed databases are NoSQL non-relational databases, limited to key-value semantics. They provide incredible performance and scalability at the cost of consistency or availability.
+
+Known Scale — Apple is known to use 75,000 Apache Cassandra nodes storing over 10 petabytes of data, back in 2015
+We cannot go into discussions of distributed data stores without first introducing the CAP Theorem.
+
+CAP Theorem
+Proven way back in 2002, the CAP theorem states that a distributed data store cannot simultaneously be consistent, available and partition tolerant.
+Some quick definitions:
+
+Consistency — What you read and write sequentially is what is expected (remember the gotcha with the database replication a few paragraphs ago?)
+Availability — the whole system does not die — every non-failing node always returns a response.
+Partition Tolerant — The system continues to function and uphold its consistency/availability guarantees in spite of network partitions
+In reality, partition tolerance must be a given for any distributed data store. As mentioned in many places, one of which this great article, you cannot have consistency and availability without partition tolerance.
+
+Think about it: if you have two nodes which accept information and their connection dies — how are they both going to be available and simultaneously provide you with consistency? They have no way of knowing what the other node is doing and as such have can either become offline (unavailable) or work with stale information (inconsistent).
+In the end you’re left to choose if you want your system to be strongly consistent or highly available under a network partition.
+
+Practice shows that most applications value availability more. You do not necessarily always need strong consistency. Even then, that trade-off is not necessarily made because you need the 100% availability guarantee, but rather because network latency can be an issue when having to synchronize machines to achieve strong consistency. These and more factors make applications typically opt for solutions which offer high availability.
+
+Such databases settle with the weakest consistency model — eventual consistency (strong vs eventual consistency explanation). This model guarantees that if no new updates are made to a given item, eventually all accesses to that item will return the latest updated value.
+
+Those systems provide BASE properties (as opposed to traditional databases’ ACID)
+
+Basically Available — The system always returns a response
+Soft state — The system could change over time, even during times of no input (due to eventual consistency)
+Eventual consistency — In the absence of input, the data will spread to every node sooner or later — thus becoming consistent
+Examples of such available distributed databases — Cassandra, Riak, Voldemort
+
+Of course, there are other data stores which prefer stronger consistency — HBase, Couchbase, Redis, Zookeeper
+
+The CAP theorem is worthy of multiple articles on its own — some regarding how you can tweak a system’s CAP properties depending on how the client behaves and others on how it is not understood properly.
+
+Cassandra
+Cassandra, as mentioned above, is a distributed No-SQL database which prefers the AP properties out of the CAP, settling with eventual consistency. I must admit this may be a bit misleading, as Cassandra is highly configurable — you can make it provide strong consistency at the expense of availability as well, but that is not its common use case.
+
+Cassandra uses consistent hashing to determine which nodes out of your cluster must manage the data you are passing in. You set a replication factor, which basically states to how many nodes you want to replicate your data.
+When reading, you will read from those nodes only.
+
+Cassandra is massively scalable, providing absurdly high write throughput.
+
+Even though this diagram might be biased and it looks like it compares Cassandra to databases set to provide strong consistency (otherwise I can’t see why MongoDB would drop performance when upgraded from 4 to 8 nodes), this should still show what a properly set up Cassandra cluster is capable of.
+
+Regardless, in the distributed systems trade-off which enables horizontal scaling and incredibly high throughput, Cassandra does not provide some fundamental features of ACID databases — namely, transactions.
+
+Consensus
+Database transactions are tricky to implement in distributed systems as they require each node to agree on the right action to take (abort or commit). This is known as consensus and it is a fundamental problem in distributed systems.
+
+Reaching the type of agreement needed for the “transaction commit” problem is straightforward if the participating processes and the network are completely reliable. However, real systems are subject to a number of possible faults, such as process crashes, network partitioning, and lost, distorted, or duplicated messages.
+
+This poses an issue — it has been proven impossible to guarantee that a correct consensus is reached within a bounded time frame on a non-reliable network.
+
+In practice, though, there are algorithms that reach consensus on a non-reliable network pretty quickly. Cassandra actually provides lightweight transactions through the use of the Paxos algorithm for distributed consensus.
+
+Distributed Computing
+Distributed computing is the key to the influx of Big Data processing we’ve seen in recent years. It is the technique of splitting an enormous task (e.g aggregate 100 billion records), of which no single computer is capable of practically executing on its own, into many smaller tasks, each of which can fit into a single commodity machine. You split your huge task into many smaller ones, have them execute on many machines in parallel, aggregate the data appropriately and you have solved your initial problem. This approach again enables you to scale horizontally — when you have a bigger task, simply include more nodes in the calculation.
+
+Known Scale — Folding@Home had 160k active machines in 2012
+An early innovator in this space was Google, which by necessity of their large amounts of data had to invent a new paradigm for distributed computation — MapReduce. They published a paper on it in 2004 and the open source community later created Apache Hadoop based on it.
+
